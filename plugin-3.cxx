@@ -15,6 +15,7 @@ extern "C"
 #include "system.h"
 #include "coretypes.h"
 #include "tree.h"
+#include "tree-iterator.h"
 #include "intl.h"
 
 #include "tm.h"
@@ -163,12 +164,51 @@ gate_callback (void*, void*)
 }
 
 extern "C" void
+get_call_expr(tree statement_list)
+{
+  tree_stmt_iterator it = tsi_start(statement_list);
+  while (!tsi_end_p(it)) {
+    cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<A stmt" << endl;
+    tree stmt = tsi_stmt(it);
+    debug_tree(stmt);
+    cout << "--fn" << endl; 
+    if (TREE_CODE(stmt)!= IF_STMT ){
+      tsi_next(&it);
+      continue;
+    }
+    debug_tree(CALL_EXPR_FN(stmt));
+    cout << "---decl" << endl;
+    tree fndecl = TREE_OPERAND(CALL_EXPR_FN(stmt), 0); // Should be a macro that does this?
+    debug_tree(fndecl); 
+    cout << "----name" << endl;
+    debug_tree(DECL_NAME(fndecl));
+    cout << "Got the name!: " << IDENTIFIER_POINTER(DECL_NAME(fndecl)) << endl;
+    tsi_next(&it);
+    cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>A stmt" << endl;
+  }
+}
+
+extern "C" void
 cb (void *tree, void*)
 {
   cout << "In my callback function" << endl;
   tree_node *tn = reinterpret_cast<tree_node*>(tree);
-  debug_tree(tn);
-  cout << "Ends my callback functin" << endl;
+  {
+    do {
+      cout << "TREE_CODE: " << TREE_CODE(tn) << endl;
+      cout << "vofdp: " << VAR_OR_FUNCTION_DECL_P(tn) << endl;
+      cout << "dfc: " << DECL_FUNCTION_CODE(tn) << endl;
+      cout << "decl_result: " << TREE_TYPE(DECL_RESULT(tn)) << endl;
+      cout << "bind_expr:" << endl;
+      //debug_tree(DECL_SAVED_TREE(tn));
+      cout << "body:" << endl;
+      debug_tree(BIND_EXPR_BODY(DECL_SAVED_TREE(tn)));
+      get_call_expr(BIND_EXPR_BODY(DECL_SAVED_TREE(tn)));
+      cout << "end body" << endl;
+      //debug_tree(tn);
+    } while (tn = TREE_CHAIN(tn));
+  }
+  cout << "Ends my callback function" << endl;
 }
 
 extern "C" int
@@ -198,5 +238,6 @@ plugin_init (plugin_name_args* info,
   //                    PLUGIN_OVERRIDE_GATE,
   //                    &gate_callback,
   //                    0);
+  cout << " r " << r << endl;
   return r;
 }
