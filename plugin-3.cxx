@@ -34,114 +34,6 @@ using namespace std;
 
 int plugin_is_GPL_compatible;
 
-struct decl_comparator
-{
-  bool
-  operator() (tree x, tree y) const
-  {
-    location_t xl (DECL_SOURCE_LOCATION (x));
-    location_t yl (DECL_SOURCE_LOCATION (y));
-
-    return xl < yl;
-  }
-};
-
-typedef std::multiset<tree, decl_comparator> decl_set;
-
-void
-collect (tree ns, decl_set& set)
-{
-  tree decl;
-  cp_binding_level* level (NAMESPACE_LEVEL (ns));
-
-  // Collect declarations.
-  //
-  for (decl = level->names; decl != 0; decl = TREE_CHAIN (decl))
-  {
-    if (DECL_IS_BUILTIN (decl))
-      continue;
-
-    set.insert (decl);
-  }
-
-  // Traverse namespaces.
-  //
-  for(decl = level->namespaces; decl != 0; decl = TREE_CHAIN (decl))
-  {
-    if (DECL_IS_BUILTIN (decl))
-      continue;
-
-    collect (decl, set);
-  }
-}
-
-
-void
-print_decl (tree decl);
-
-enum access_spec
-{
-  public_, protected_, private_
-};
-
-const char* access_spec_str[] =
-{
-  "public", "protected", "private"
-};
-
-
-void
-print_decl (tree decl)
-{
-  tree type (TREE_TYPE (decl));
-  int dc (TREE_CODE (decl));
-  int tc;
-
-  if (type)
-  {
-    tc = TREE_CODE (type);
-
-    if (dc == TYPE_DECL && tc == RECORD_TYPE)
-    {
-      // If DECL_ARTIFICIAL is true this is a class
-      // declaration. Otherwise this is a typedef.
-      //
-      if (DECL_ARTIFICIAL (decl))
-      {
-	//        print_class (type);
-        return;
-      }
-    }
-  }
-
-  tree id (DECL_NAME (decl));
-  const char* name (id
-                    ? IDENTIFIER_POINTER (id)
-                    : "<unnamed>");
-
-  // cerr << tree_code_name[dc] << " "
-  //      << decl_scope (decl) << "::" << name;
-
-  if (type)
-    cerr << " type " << tree_code_name[tc];
-
-  cerr << " at " << DECL_SOURCE_FILE (decl)
-       << ":" << DECL_SOURCE_LINE (decl) << endl;
-}
-
-void
-traverse (tree ns)
-{
-  decl_set set;
-  collect (ns, set);
-
-  for (decl_set::iterator i (set.begin ()), e (set.end ());
-       i != e; ++i)
-  {
-    print_decl (*i);
-  }
-}
-
 extern "C" void
 gate_callback (void*, void*)
 {
@@ -164,51 +56,93 @@ gate_callback (void*, void*)
 }
 
 extern "C" void
-get_call_expr(tree statement_list)
-{
-  tree_stmt_iterator it = tsi_start(statement_list);
-  while (!tsi_end_p(it)) {
-    cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<A stmt" << endl;
-    tree stmt = tsi_stmt(it);
-    debug_tree(stmt);
-    cout << "--fn" << endl; 
-    if (TREE_CODE(stmt)!= IF_STMT ){
-      tsi_next(&it);
-      continue;
-    }
-    debug_tree(CALL_EXPR_FN(stmt));
-    cout << "---decl" << endl;
-    tree fndecl = TREE_OPERAND(CALL_EXPR_FN(stmt), 0); // Should be a macro that does this?
+manage_call_expr(tree statement, int i){
+    cout << "----  Manage CALL_EXPR  ----" << endl;
+    cout << "---- Fn of stattement number: "<< i << "****" << endl;
+    debug_tree(CALL_EXPR_FN(statement) );
+    cout << "---- End Fn "<< i << "****" << endl;
+    
+    tree fndecl = TREE_OPERAND(CALL_EXPR_FN(statement), 0);//  In this link they do the same thing : lwn.net/Articles/457543/
+
+    tree_node *fndecl_node = reinterpret_cast<tree_node*>(fndecl);
+    
+    cout << "---- Function name: " <<   IDENTIFIER_POINTER(DECL_NAME(fndecl_node)) << endl;
+    
     debug_tree(fndecl); 
-    cout << "----name" << endl;
-    debug_tree(DECL_NAME(fndecl));
-    cout << "Got the name!: " << IDENTIFIER_POINTER(DECL_NAME(fndecl)) << endl;
-    tsi_next(&it);
-    cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>A stmt" << endl;
+    
+    cout << "---- END Manage CALL_EXPR  ----" << endl;
+}
+
+extern "C" void
+manage_tree_node(tree my_tree, int i){
+  
+  tree_node *my_treenode = reinterpret_cast<tree_node*>(my_tree);
+  
+  switch(TREE_CODE(my_treenode)){
+      case CALL_EXPR:
+           manage_call_expr(my_tree,i);
+           break;
+      default:
+           break;
+    }
+}
+
+extern "C" void
+navigate_statements(tree statement_list){
+
+  cout << "************** Statements navigation ******************" << endl;
+  int i = 1;
+  tree_stmt_iterator stm_iterator = tsi_start(statement_list );
+
+  while(!tsi_end_p(stm_iterator)){
+    cout << "**** statement "<< i << "****" << endl;
+
+    tree statement = tsi_stmt(stm_iterator);
+    debug_tree(statement);
+    tree_node *statement_node = reinterpret_cast<tree_node*>(statement);
+
+    manage_tree_node(statement_node, i);
+                   
+    tsi_next(&stm_iterator);
+    i++;
   }
+  
+  cout << "************** END statements navigation ******************" << endl;
+}
+static int count_calls = 0;
+
+
+extern "C" void
+navigate_tree(tree_node *tree){
+  //if the main function contains only one instruction => there is no a list of statements
+  
+  if(TREE_CODE(tree) == STATEMENT_LIST ){
+    navigate_statements( tree );
+  }else{
+    manage_tree_node(tree, 0);
+  }
+
 }
 
 extern "C" void
 cb (void *tree, void*)
 {
-  cout << "In my callback function" << endl;
+  count_calls ++ ;
+  
+  cout << "************** In my callback function. Call number: " << count_calls << "*******************"<< endl;
   tree_node *tn = reinterpret_cast<tree_node*>(tree);
-  {
-    do {
-      cout << "TREE_CODE: " << TREE_CODE(tn) << endl;
-      cout << "vofdp: " << VAR_OR_FUNCTION_DECL_P(tn) << endl;
-      cout << "dfc: " << DECL_FUNCTION_CODE(tn) << endl;
-      cout << "decl_result: " << TREE_TYPE(DECL_RESULT(tn)) << endl;
-      cout << "bind_expr:" << endl;
-      //debug_tree(DECL_SAVED_TREE(tn));
-      cout << "body:" << endl;
-      debug_tree(BIND_EXPR_BODY(DECL_SAVED_TREE(tn)));
-      get_call_expr(BIND_EXPR_BODY(DECL_SAVED_TREE(tn)));
-      cout << "end body" << endl;
-      //debug_tree(tn);
-    } while (tn = TREE_CHAIN(tn));
-  }
-  cout << "Ends my callback function" << endl;
+  debug_tree(tn);
+  
+  cout << "************** Into the body function ******************" << endl;
+  debug_tree( BIND_EXPR_BODY( DECL_SAVED_TREE(tn) ) );
+  
+  tree_node *main_body = BIND_EXPR_BODY( DECL_SAVED_TREE(tn) );
+
+  navigate_tree(main_body);
+
+  cout << "************** out body function ******************" << endl;
+
+  cout << "**************** Ends my callback functin **********************" << endl;
 }
 
 extern "C" int
@@ -238,6 +172,5 @@ plugin_init (plugin_name_args* info,
   //                    PLUGIN_OVERRIDE_GATE,
   //                    &gate_callback,
   //                    0);
-  cout << " r " << r << endl;
   return r;
 }
