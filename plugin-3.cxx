@@ -25,7 +25,6 @@ extern "C"
 #include "c-pragma.h"
 #include "cp/cp-tree.h"
 }
-
 #include <set>
 #include <string>
 #include <iostream>
@@ -34,14 +33,24 @@ using namespace std;
 
 int plugin_is_GPL_compatible;
 
+extern "C" void  myprint_declaration(tree decl);
+extern "C" void manage_types(tree nodetype);
+extern "C" void navigate_statements(tree statement_list);
+
+
 extern "C" void
-gate_callback (void*, void*)
+gate_callback (void* tree, void*)
 {
   // If there were errors during compilation,
   // let GCC handle the exit.
   //
+  cout << "Into gate callback "<< endl;
   if (errorcount || sorrycount)
     return;
+
+  tree_node *tn = reinterpret_cast<tree_node*>(tree);
+  //myprint_declaration(tn); 
+  //  debug_tree(tn);
 
   int r (0);
 
@@ -55,36 +64,155 @@ gate_callback (void*, void*)
   exit (r);
 }
 
+  
+extern "C" void
+myprint_declaration(tree decl) //conflit error if you name the function: print_declaration
+{
+  int treecode = TREE_CODE(decl);
+  tree id = DECL_NAME(decl);
+  // const char* name (id ? IDENTIFIER_POINTER (id): "<unnamed>");
+  
+  cout << "*** ~~~ "  << tree_code_name[treecode]  << " "/* << name <<*/ " at "
+       <<  DECL_SOURCE_FILE(decl) << ":"
+       <<  DECL_SOURCE_LINE(decl) << "~~~ ***" << endl;
+}
+
+extern "C" void
+manage_function_decl(tree func_decl_node ){
+  cout << "debug 1.1" << endl;
+  myprint_declaration(func_decl_node);
+  // debug_tree(func_decl_node);
+  cout << "---GET THE RETURN TYPE---"<< endl;
+  // tree result_fndecl = TREE_TYPE(tn);
+  tree_node *tn =  reinterpret_cast<tree_node*>(func_decl_node);
+  tree get_decl_result = DECL_RESULT(tn);
+  cout << "debug 1.1.1 --- get the name:" << IDENTIFIER_POINTER(DECL_NAME(tn)) << endl;
+
+  cout << "debug 1.2. ----  1 means that the function is external:  " << DECL_EXTERNAL(tn) <<  endl;
+  // debug_tree( TREE_TYPE(tn));
+  cout << "debug 1.3 -- debug tree of TREE_TYPE( TREE_TYPE(tn))" << endl;
+  //debug_tree(TREE_TYPE( TREE_TYPE(tn) ));
+  manage_types(TREE_TYPE( TREE_TYPE(tn) ));
+  cout << "debug 1.4-- take arguments " << endl;
+  tree node = TYPE_ARG_TYPES( TREE_TYPE(tn) );
+  //debug_tree(TYPE_ARG_TYPES( TREE_TYPE(tn) ));
+  //cout << "Tree_code (get_decl_result): " << TREE_CODE(get_decl_result) << endl;
+  do{
+    manage_types(TREE_VALUE(node));
+  }
+  while(node = TREE_CHAIN(node) );
+
+  /*
+  // debug_tree(get_decl_result);
+  //myprint_declaration(get_decl_result);
+  cout << "-------------------get the type?" << endl;
+  tree get_type_decl_result = TREE_TYPE(get_decl_result);
+  // debug_tree(get_type_decl_result);
+  manage_types(get_type_decl_result);
+  cout << "--- END -- GET THE RETURN TYPE ---"<< endl;
+
+  
+  cout << "-------get the FUNCTION arguments -----------" << endl;
+  tree get_arguments_node = DECL_ARGUMENTS(func_decl_node);
+  debug_tree(get_arguments_node);
+  do{ 
+    cout << "------ get the argument type ---------" << endl;
+    if(get_arguments_node == NULL_TREE){
+      cout << "NO ARGUMENTS " << endl;
+    }else{
+      // tree get_type_arg = TREE_TYPE(get_arguments_node);
+      tree get_type_arg = DECL_ARG_TYPE(get_arguments_node);
+      cout << "tree code Return type argument of the main function: " <<  TREE_CODE(get_type_arg) << endl;
+      cout << "Return type argument of the main function: " <<  tree_code_name[TREE_CODE(get_type_arg)] << endl;
+      //debug_tree(get_type_arg);
+      manage_types(get_type_arg);
+    } 
+    }while(get_arguments_node = TREE_CHAIN(get_arguments_node));*/
+}
+
+
+//to manage function calls
 extern "C" void
 manage_call_expr(tree statement, int i){
     cout << "----  Manage CALL_EXPR  ----" << endl;
+    // myprint_declaration(statement);x3
     cout << "---- Fn of stattement number: "<< i << "****" << endl;
-    debug_tree(CALL_EXPR_FN(statement) );
+    // debug_tree(CALL_EXPR_FN(statement) );
     cout << "---- End Fn "<< i << "****" << endl;
     
     tree fndecl = TREE_OPERAND(CALL_EXPR_FN(statement), 0);//  In this link they do the same thing : lwn.net/Articles/457543/
 
-    tree_node *fndecl_node = reinterpret_cast<tree_node*>(fndecl);
-    
-    cout << "---- Function name: " <<   IDENTIFIER_POINTER(DECL_NAME(fndecl_node)) << endl;
-    
-    debug_tree(fndecl); 
-    
+    tree_node *fndecl_node = reinterpret_cast<tree_node*>(fndecl); //fndecl_node is a FUNCION_DECL type node
+    // myprint_declaration(fndecl_node);
+    // cout << "debug 1.0"<< endl;
+    //debug_tree(fndecl_node);
+    manage_function_decl(fndecl);
+    cout << "debug 2.0"<< endl;
+ // debug_tree(fndecl);
+  
+    cout << "---- END into fndecl" << endl;
     cout << "---- END Manage CALL_EXPR  ----" << endl;
+}
+
+extern "C" void
+manage_cond_expr(tree tree_if, int i )
+{
+   cout << "----  Manage COND_EXPR  ----" << endl;
+
+   cout << "----  Then Part   ----" << endl; 
+
+   tree_node *mytree = reinterpret_cast<tree_node*>(tree_if);
+   
+
+   tree thenside_node = COND_EXPR_THEN(mytree);
+ 
+   // debug_tree(thenside_node);
+   navigate_statements(thenside_node);
+   cout << "---- END Manage COND_EXPR  ----" << endl;
+
+}
+
+extern "C" void
+manage_goto_expr(tree my_tree, int i){
+   cout << "----  Manage GOTO_EXPR  ----" << endl;
+   tree gotonode = GOTO_DESTINATION(my_tree);
+   debug_tree(gotonode);
+   cout << "----  Manage GOTO_EXPR  ----" << endl;
+}
+
+extern "C" void
+manage_decl_expr(tree my_tree,int i){
+  cout << " --- Manage DECL_EXPR --- " << endl;
+  debug_tree(my_tree);
+
+  cout << " --- END Manage DECL_EXPR --- " << endl;
 }
 
 extern "C" void
 manage_tree_node(tree my_tree, int i){
   
   tree_node *my_treenode = reinterpret_cast<tree_node*>(my_tree);
-  
+   
   switch(TREE_CODE(my_treenode)){
-      case CALL_EXPR:
-           manage_call_expr(my_tree,i);
-           break;
-      default:
-           break;
-    }
+    case CALL_EXPR:
+      manage_call_expr(my_tree,i); //manage function calls
+      break;
+
+    case COND_EXPR: 
+      manage_cond_expr(my_tree,i);
+      break;
+
+    case GOTO_EXPR:
+      manage_goto_expr(my_tree,i);
+      break;
+
+    case DECL_EXPR:
+      manage_decl_expr(my_tree,i);
+      break;
+
+    default:
+      break;
+  }
 }
 
 extern "C" void
@@ -109,6 +237,7 @@ navigate_statements(tree statement_list){
   
   cout << "************** END statements navigation ******************" << endl;
 }
+
 static int count_calls = 0;
 
 
@@ -124,22 +253,115 @@ navigate_tree(tree_node *tree){
 
 }
 
+extern "C" void 
+manage_types(tree nodetype)
+{
+
+  cout << "Node Type: " <<  tree_code_name[TREE_CODE(nodetype)] << endl;
+  switch(TREE_CODE(nodetype)){
+   case INTEGER_TYPE: 
+     if( TYPE_STRING_FLAG(nodetype) == 1 ){
+       cout <<" Type: char " <<  endl;
+     }else{
+       cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
+       switch( TYPE_PRECISION(nodetype)){
+        case 16 :
+	  cout << "type: short"<< endl;
+          break; 
+        case 32 :
+	  cout << "type: int"<< endl;
+          break; 
+        case 64 :
+	  cout << "type: long"<< endl;
+          break; 
+       }
+     }
+     break;
+
+  case REAL_TYPE:
+    cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
+    switch( TYPE_PRECISION(nodetype)){
+      case 32 :
+	cout << "type: float"<< endl;
+	break; 
+      case 64 :
+	cout << "type: double"<< endl;
+	break; 
+      case 80:
+	cout << "type: long double" << endl;
+    }
+    break;
+
+  case VOID_TYPE:
+    break;
+  case COMPLEX_TYPE:
+    break;
+  case ENUMERAL_TYPE:
+    break;
+  case BOOLEAN_TYPE:
+    break;
+  case POINTER_TYPE:
+    break;
+  default:
+     break;
+  }
+  
+
+}
+
 extern "C" void
-cb (void *tree, void*)
+cb (void *maintree, void*)
 {
   count_calls ++ ;
   
   cout << "************** In my callback function. Call number: " << count_calls << "*******************"<< endl;
-  tree_node *tn = reinterpret_cast<tree_node*>(tree);
-  debug_tree(tn);
+
+  tree_node *tn = reinterpret_cast<tree_node*>(maintree);
+  myprint_declaration(tn); 
+  tree get_decl_result = DECL_RESULT(tn);
+  cout << " --- Function name: " << IDENTIFIER_POINTER(DECL_NAME(tn)) << " ---" << endl;
   
+  // debug_tree(tn);
+  // GET the return type, the arguments and the type arguments of the main function
+  /*
+  cout << "---GET THE RETURN TYPE---"<< endl;
+  // tree result_fndecl = TREE_TYPE(tn);
+  tree get_decl_result = DECL_RESULT(tn);
+  cout << "Tree_code (get_decl_result): " << TREE_CODE(get_decl_result) << endl;
+  // debug_tree(get_decl_result);
+  cout << "-------------------get the type?" << endl;
+  tree get_type_decl_result = TREE_TYPE(get_decl_result);
+  // debug_tree(get_type_decl_result);
+  manage_types(get_type_decl_result);
+  cout << "--- END -- GET THE RETURN TYPE ---"<< endl;
+
+  
+  cout << "-------get the FUNCTION arguments -----------" << endl;
+  tree get_arguments_node = DECL_ARGUMENTS(tn);
+  debug_tree(get_arguments_node);
+  do{ 
+    cout << "------ get the argument type ---------" << endl;
+    if(get_arguments_node == NULL_TREE){
+      cout << "NO ARGUMENTS " << endl;
+    }else{
+      // tree get_type_arg = TREE_TYPE(get_arguments_node);
+      tree get_type_arg = DECL_ARG_TYPE(get_arguments_node);
+      cout << "tree code Return type argument of the main function: " <<  TREE_CODE(get_type_arg) << endl;
+      cout << "Return type argument of the main function: " <<  tree_code_name[TREE_CODE(get_type_arg)] << endl;
+      //debug_tree(get_type_arg);
+      manage_types(get_type_arg);
+    } 
+  }while(get_arguments_node = TREE_CHAIN(get_arguments_node));
+
+
+  */
+
+  //debug_tree(tn);
+  tree_node* main_body = BIND_EXPR_BODY( DECL_SAVED_TREE(tn) ); 
   cout << "************** Into the body function ******************" << endl;
-  debug_tree( BIND_EXPR_BODY( DECL_SAVED_TREE(tn) ) );
-  
-  tree_node *main_body = BIND_EXPR_BODY( DECL_SAVED_TREE(tn) );
+      
 
   navigate_tree(main_body);
-
   cout << "************** out body function ******************" << endl;
 
   cout << "**************** Ends my callback functin **********************" << endl;
@@ -152,7 +374,6 @@ plugin_init (plugin_name_args* info,
   int r (0);
 
   cerr << "starting " << info->base_name << endl;
-
   //
   // Parse options if any.
   //
@@ -163,14 +384,16 @@ plugin_init (plugin_name_args* info,
 
   // Register callbacks.
   //
+  
   register_callback(info->base_name,
 		    PLUGIN_PRE_GENERICIZE,
 		    &cb,
 		    0);
-
-  // register_callback (info->base_name,
-  //                    PLUGIN_OVERRIDE_GATE,
-  //                    &gate_callback,
-  //                    0);
+  /*
+   register_callback (info->base_name,
+                        PLUGIN_OVERRIDE_GATE,
+                        &gate_callback,
+                      0);
+  */ 
   return r;
 }
