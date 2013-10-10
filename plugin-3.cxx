@@ -40,15 +40,18 @@ int plugin_is_GPL_compatible;
  
 
 extern "C" void myprint_declaration(tree decl);
-extern "C" string manage_types(tree nodetype);
+
+extern "C" string manage_types(tree nodetype, bool isPuntator);
+
 extern "C" void navigate_statements(tree statement_list);
+extern "C" void navigate_expression(tree my_tree);
 
 list<tree_node*> list_functions_call_without_body;
 list<tree_node*> list_functions;
 list<tree_node*> list_functions_tomock;
 
 ofstream myfile;
-
+ofstream headerfile;
 
 
 extern "C" void
@@ -110,13 +113,13 @@ manage_function_decl(tree func_decl_node ){
   // debug_tree( TREE_TYPE(tn));
   cout << "debug 1.3 -- debug tree of TREE_TYPE( TREE_TYPE(tn))" << endl;
   //debug_tree(TREE_TYPE( TREE_TYPE(tn) ));
-  manage_types(TREE_TYPE( TREE_TYPE(tn) )); // gestisci il valore di ritorno!
+  manage_types(TREE_TYPE( TREE_TYPE(tn) ), false); // gestisci il valore di ritorno!
   cout << "debug 1.4-- take arguments " << endl;
   tree node = TYPE_ARG_TYPES( TREE_TYPE(tn) );
   //debug_tree(TYPE_ARG_TYPES( TREE_TYPE(tn) ));
   //cout << "Tree_code (get_decl_result): " << TREE_CODE(get_decl_result) << endl;
   do{
-    manage_types(TREE_VALUE(node));
+    manage_types(TREE_VALUE(node), false);
   }
   while(node = TREE_CHAIN(node) );
   */
@@ -173,8 +176,22 @@ manage_goto_expr(tree my_tree, int i){
    cout << "----  Manage GOTO_EXPR  ----" << endl;
 }
 
-extern "C" void
+extern "C" void //decl_expr is a generail structure. It is not used only into the function. Keep attention!
 manage_decl_expr(tree my_tree,int i){
+  cout << " --- Into manage_decl_expr() ---" << endl;
+  tree node = TREE_OPERAND(my_tree,0);
+  debug_tree(node);
+  
+  switch(TREE_CODE(node)){
+  case VAR_DECL:
+    // cout << "Into var_decl !" << endl;
+    navigate_expression(DECL_INITIAL(node));
+    break;
+  default:
+    break;
+  }
+
+
   /* cout << " --- Manage DECL_EXPR --- " << endl;
   debug_tree(my_tree);
    cout << " ****-- debug 2.1 --**** "<< endl;
@@ -184,6 +201,69 @@ manage_decl_expr(tree my_tree,int i){
    debug_tree( DECL_CONTEXT(my_tree) );
   // debug_tree( COMPOUND_LITERAL_EXPR_DECL_EXPR(my_tree) ); 
   cout << " --- END Manage DECL_EXPR --- " << endl; */
+}
+
+extern "C" void
+navigate_expression(tree my_tree){
+  switch(TREE_CODE(my_tree)){
+ 
+  case MULT_EXPR: // manage brackets (multiple expression)
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case TRUNC_DIV_EXPR: // division
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case TRUNC_MOD_EXPR: // for % operation
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case PLUS_EXPR:// +
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case MINUS_EXPR:// +
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case NE_EXPR:// &&
+    navigate_expression(TREE_OPERAND(my_tree,0));
+    navigate_expression(TREE_OPERAND(my_tree,1)); 
+    break;
+
+  case CALL_EXPR: // manage the function
+    cout << "INTO CALL EXPRESSION OOOOOOOOOOOOOOO" << endl;
+    manage_call_expr(my_tree, -1);
+    debug_tree(my_tree);
+    break;
+
+  default:
+    break;
+  }
+}
+
+
+extern "C" void
+manage_modify_expr(tree my_tree, int i)
+{ 
+  cout << endl;
+  cout << " --- Start manage_modify_expr() --- " << endl;
+  /* Example:
+  * From an expression as "x = 1 + function();" we can access to two nodes. The left node: "x" and the right node: 1 + function()  
+  *We need to access only to the right side. So we use just the macro TREE_OPERAND with the parameter: 1.
+   */
+  tree  expression = TREE_OPERAND(my_tree, 1);
+  cout << "debug_tree(expression)"<< endl;
+  debug_tree(expression);
+  navigate_expression(expression);
+  cout << " --- End manage_modify_expr() --- " << endl;
+ 
 }
 
 extern "C" void
@@ -207,7 +287,9 @@ manage_tree_node(tree my_tree, int i){
     case DECL_EXPR:
       manage_decl_expr(my_tree,i);
       break;
-
+    case  MODIFY_EXPR:
+      manage_modify_expr(my_tree, i);
+      break;
     default:
       break;
   }
@@ -252,53 +334,57 @@ navigate_tree(tree_node *tree){
 }
 
 extern "C" string 
-manage_types(tree nodetype)
+manage_types(tree nodetype, bool isPuntator)
 {
   string result;
-  cout << "Node Type: " <<  tree_code_name[TREE_CODE(nodetype)] << endl;
+  cout << " *** Into manage_types() ***" << endl;
+  if(isPuntator)
+    cout << "PUNTATOR to an: "<< endl;
+  debug_tree(nodetype);
+  //  cout << "Node Type: " <<  tree_code_name[TREE_CODE(nodetype)] << endl;
   switch(TREE_CODE(nodetype)){
    case INTEGER_TYPE: 
      if( TYPE_STRING_FLAG(nodetype) == 1 ){
        result = "char";
-       cout <<" Type: char " <<  endl;
+       //   cout <<" Type: char " <<  endl;
      }else{
-       cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
+       //cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
        switch( TYPE_PRECISION(nodetype)){
         case 16 :
 	  result = "short";
-	  cout << "type: short"<< endl;
+	  // cout << "type: short"<< endl;
           break; 
         case 32 :
-	  result = "int";
-	  cout << "type: int"<< endl;
+	   result = "int";
+	  //cout << "type: int"<< endl;
           break; 
         case 64 :
-	  result = "long";
-	  cout << "type: long"<< endl;
+	   result = "long";
+	  //cout << "type: long"<< endl;
           break; 
        }
      }
      break;
 
   case REAL_TYPE:
-    cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
+    // cout <<" TYPE_PRECISION:  " << TYPE_PRECISION(nodetype)  << endl;
     switch( TYPE_PRECISION(nodetype)){
       case 32 :
-	result = "float";
-	cout << "type: float"<< endl;
+	 result = "float";
+	//	cout << "type: float"<< endl;
 	break; 
       case 64 :
-	result = "double";
-	cout << "type: double"<< endl;
+	 result = "double";
+	//	cout << "type: double"<< endl;
 	break; 
       case 80:
-	 result = "long double";
-	cout << "type: long double" << endl;
+	  result = "long double";
+	 //	cout << "type: long double" << endl;
     }
     break;
 
   case VOID_TYPE:
-    result="void";
+     result = "void";
     break;
   case COMPLEX_TYPE:
     break;
@@ -307,13 +393,15 @@ manage_types(tree nodetype)
   case BOOLEAN_TYPE:
     break;
   case POINTER_TYPE:
+    //debug_tree(TREE_TYPE(nodetype));
+    result = manage_types(TREE_TYPE(nodetype),true)+"*";
     break;
   default:
      break;
   }
-  cout << endl;
-  cout << "DENTRO GESTIONE TIPI. RISULTATO= "<< result << endl;
-    cout << endl;
+  // cout << endl;
+  // cout << "Into Manage types. result= "<< result << endl;
+  // cout << endl;
   return result;
 }
 
@@ -332,25 +420,19 @@ cb_plugin_pre_generize (void *maintree, void*)
   tree get_decl_result = DECL_RESULT(tn);
   cout << " --- Function name: " << IDENTIFIER_POINTER(DECL_NAME(tn)) << " ---" << endl;
   
+
+  /*
   // debug_tree(tn);
   // GET the return type, the arguments and the type arguments of the main function
-  
-  cout << "---GET THE RETURN TYPE---"<< endl; //here it works because DECL_EXTERNAL(tn) != 1
-
+  // cout << "---GET THE RETURN TYPE---"<< endl; //here it works because DECL_EXTERNAL(tn) != 1
   // tree get_decl_result = DECL_RESULT(tn);
-
-  cout << "Tree_code (get_decl_result): " << TREE_CODE(get_decl_result) << endl;
-
+  //cout << "Tree_code (get_decl_result): " << TREE_CODE(get_decl_result) << endl;
   // debug_tree(get_decl_result);
   cout << "-------------------get the type?" << endl;
   tree get_type_decl_result = TREE_TYPE(get_decl_result);
   // debug_tree(get_type_decl_result);
-
-  string return_type =  manage_types(get_type_decl_result);
-  
+  string return_type =  manage_types(get_type_decl_result,false);
   cout << "--- END -- GET THE RETURN TYPE ---"<< endl;
-
-  
   cout << "-------get the FUNCTION arguments -----------" << endl;
   tree get_arguments_node = DECL_ARGUMENTS(tn);
   debug_tree(get_arguments_node);
@@ -364,13 +446,12 @@ cb_plugin_pre_generize (void *maintree, void*)
       cout << "tree code Return type argument of the main function: " <<  TREE_CODE(get_type_arg) << endl;
       cout << "Return type argument of the main function: " <<  tree_code_name[TREE_CODE(get_type_arg)] << endl;
       //debug_tree(get_type_arg);
-      string argtype =  manage_types(get_type_arg);
+      string argtype =  manage_types(get_type_arg,false);
     } 
-  }while(get_arguments_node = TREE_CHAIN(get_arguments_node));
+  }while(get_arguments_node = TREE_CHAIN(get_arguments_node));*/
 
 
   
-
   //debug_tree(tn);
   tree_node* main_body = BIND_EXPR_BODY( DECL_SAVED_TREE(tn) ); 
   cout << "************** Into the body function ******************" << endl;
@@ -392,111 +473,276 @@ extern "C"
 void print_declarationfunction(tree_node * node){
   const char* name = IDENTIFIER_POINTER( DECL_NAME(node) );
   
-  cout << "*** ~~~ "  << tree_code_name[ TREE_CODE(node)]  << " " << name << " at "
+  cout << "- "  << tree_code_name[ TREE_CODE(node)]  << " " << name << " at "
        <<  DECL_SOURCE_FILE(node)<< ":"
-       <<  DECL_SOURCE_LINE(node)<< "~~~ ***" << endl;
+       <<  DECL_SOURCE_LINE(node) << endl;
 
 }
-/*
-extern "C"
-void print_list(list<tree_node*> list){
+
+void print_list(const list<tree_node*>& list_){
  
-  for (list<tree_node*>::iterator it = list.begin(); it != list.end(); ++it){
+  for ( list<tree_node*>::const_iterator it = list_.begin(); it != list_.end(); ++it){
     print_declarationfunction(*it);
   }
 
-  }*/
-
+}
 
 extern "C"
-void write_function_on_file(){
-  cout << "-- Write function calls to mock into the temporary file: temporary_file.c "<< endl; 
-  myfile.open("temporary_file.c");
- 
-  //============
-  for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
+void write_external_functions(){
+ for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
     list<string> list_type_args;
     cout << endl;
     print_declarationfunction(*it);
     cout << endl;
-    debug_tree(*it);  
+    // debug_tree(*it);  
     cout << endl;
     string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it));
-    cout << "Function name:" << function_name<< endl;
-
-    cout << "---GET THE RETURN TYPE---"<< endl;
+    // cout << "Function name:" << function_name<< endl;
+    //cout << "---GET THE RETURN TYPE---"<< endl;
     tree_node *tn =  reinterpret_cast<tree_node*>(*it);
     tree get_decl_result = DECL_RESULT(tn);
    
-
-    cout << "debug 1.2. ----  1 means that the function is external:  " << DECL_EXTERNAL(*it) <<  endl;
+    // cout << "debug 1.2. ----  1 means that the function is external:  " << DECL_EXTERNAL(*it) <<  endl;
    
-  
-    string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ));
+    string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ),false);
+    myfile << "extern \"C\" "<<endl;
     myfile << return_type << " " << function_name << "("; 
   
-    cout << "return type: "<< return_type << endl;
     cout << endl;
   
-    cout << "take arguments " << endl;
+    //cout << "take arguments " << endl;
     tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );
 
     do{
-      list_type_args.push_back( manage_types(TREE_VALUE(node)));//for each arguments: get the type argument and put it into the list_type_args
+      list_type_args.push_back( manage_types(TREE_VALUE(node),false));//for each arguments: get the type argument and put it into the list_type_args
     }
     while(node = TREE_CHAIN(node) );
 
     cout << endl;
-    cout << "Print type arguments"<<endl;
+    // cout << "Print type arguments"<<endl;
     //print type arguments
     int count =0;
 
     //its necessary jump the last element that its always (a void type) not necessary
-    for (list<string>::iterator it = list_type_args.begin();count < list_type_args.size()-1 ; ++it, count++){
+    for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
       
-      myfile << *it << " param" << count;
+      myfile << *x << " param" << count;
       if(count != list_type_args.size()-2){
 	myfile << ", ";
       }
     }
     myfile << "){" << endl;
-    myfile << "  printf( \" It works!!! \"  ); " << endl; 
+    myfile << " // check expectations " << endl;
+    myfile << "struct Mock_" << function_name << "*obj  = list_"<<function_name << ".front();" << endl;
+    myfile << "int ris;" << endl;
+    count = 0;
+    for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
+      myfile << "  switch( obj->switch"<< count <<" ){"<< endl;
+      myfile << "    case ANY_VALUE: "<< endl; 
+      myfile << "      break; "<< endl; 
+
+
+      myfile << "    case CHECK_PARAMS_VALUE: "<< endl; 
+      myfile << "      if( obj->param" << count << " != param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
+      myfile << "      } "<< endl; 
+      myfile << "      break; "<< endl;
+
+
+      myfile << "    case USER_FUNCTION: "<< endl; 
+      myfile << "      ris = obj->userfunc"<< count << "(param" << count << ");" << endl;  
+      //myfile << "      printf(\"******* ris = %d \\n \",ris);" << endl;
+      myfile << "      if( ris !=0 ){ "<< endl; 
+      myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
+      myfile << "      } "<< endl; 
+      myfile << "      break; "<< endl;
+
+      string type(*x);
+      if(type.compare("char*") == 0){
+	myfile << "    case CHECK_PARAMS_STRING: "<< endl; 
+	myfile << "      if( strcmp(obj->param" << count << ", param" << count <<")!=0 ){ "<< endl; 
+	myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
+	myfile << "      } "<< endl; 
+	myfile << "      break; "<< endl;
+      }
+
+      myfile << "    default: "<< endl; 
+      myfile << "      break; "<< endl; 
+      myfile << "  }//close switch "<< endl;
+      myfile << endl;
+    }
+
+    
     myfile << "}" << endl;
     myfile << endl;  
   }
+ 
+
+}
+
+extern "C"
+void  write_expectation_functions(){
+
+ for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
+    list<string> list_type_args; 
+  
+    cout << endl;
+    string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
+    tree_node *tn =  reinterpret_cast<tree_node*>(*it);
+    tree get_decl_result = DECL_RESULT(tn);   
+    // string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ),false);
+    //myfile << return_type << " " << function_name << "("; 
+    myfile << "extern \"C\"" << endl;
+    myfile << "void expect_" << function_name << "(";
+ 
+    tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );//get function's arguments
+    do{
+      list_type_args.push_back( manage_types(TREE_VALUE(node), false ) );//for each arguments: get the type argument and put it into the list_type_args
+    }
+    while(node = TREE_CHAIN(node) );
+
+    //write on temporary_file.c the type arguments
+    int count =0;
+    //it is necessary jump the last element that its always (a void type) not necessary
+    for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
+      
+      myfile << "int switch"<< count << ", " << *x << " param" << count << ", int (*userfunc"<<count<<")("<<*x<<" x)";
+      if(count != list_type_args.size()-2){
+	myfile << ", ";
+      }
+    }
+    myfile << "){" << endl;
+    myfile << "  printf(\"INTO: "<<function_name<<" \\n\" );" << endl;
+
+    string namestruct = "Mock_"+ function_name;
+    myfile << "  struct "<< namestruct<< " *obj = (struct "<< namestruct <<"*)  malloc(sizeof(struct " << namestruct << "));" << endl;
     
+   
+    for (count = 0;count < list_type_args.size()-1 ;  count++){ //size()-1 because we need always to skip the last argument
+      //myfile << " printf(\"param"<<count<<": %g, switch"<<count<<": %g  \\n \", param"<<count<< " , switch"<<count<<" );"<< endl;
+      myfile << "  printf(\"param"<<count<<":%g \\n\",param"<<count<<" );" << endl;
+      myfile << "  obj->switch" << count << "= switch"<< count<<";"<< endl; 
+      myfile << "  obj->param" << count << "= param"<< count<<";"<< endl;
+      myfile << "  obj->userfunc" << count << "= userfunc"<< count<<";"<< endl;
+    }
+    myfile << "  list_"<< function_name << ".push_front(obj);"<< endl;     
+      
+
+    myfile << "}" << endl;
+    myfile << endl;  
+  }
+ 
+
+}
+
+extern "C"
+void write_structs(){
+
+ for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
+   list<string> list_type_args; 
+   
+   cout << endl;
+   string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
+   tree_node *tn =  reinterpret_cast<tree_node*>(*it);
+   tree get_decl_result = DECL_RESULT(tn);   
+   // string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ), false);
+   //myfile << return_type << " " << function_name << "("; 
+   
+   myfile << "struct Mock_" << function_name << "{"<< endl;
+   
+   tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );//get function's arguments
+   do{
+     list_type_args.push_back( manage_types(TREE_VALUE(node), false ) );//for each arguments: get the type argument and put it into the list_type_args
+   }
+   while(node = TREE_CHAIN(node) );
+   
+   //write on temporary_file.c the type arguments
+   int count =0;
+   //it is necessary jump the last element that its always (a void type) not necessary
+   for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
+     
+     myfile << "  int switch"<< count << ";" <<"  " << *x << " param" << count << ";" << " int (*userfunc" << count << ")("<< *x << " x);"  << endl;
+     
+   }
+   myfile << "};" << endl;
+   myfile << "list<Mock_"<< function_name << "*> list_" << function_name << ";"<< endl; 
+   myfile << endl;
+ }
+
+   
+}
+ 
+extern "C"
+void write_header(){
+  headerfile.open("temporary_file.h");
+  headerfile << "#ifndef TEMPORARYFILE_H"<< endl;
+  headerfile << "#define TEMPORARYFILE_H" << endl;
+  
+ for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
+    list<string> list_type_args; 
+  
+    cout << endl;
+    string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
+    tree_node *tn =  reinterpret_cast<tree_node*>(*it);
+    tree get_decl_result = DECL_RESULT(tn);   
+   
+    headerfile << "extern void expect_" << function_name << "(";
+ 
+    tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );//get function's arguments
+    do{
+      list_type_args.push_back( manage_types(TREE_VALUE(node),false ));//for each arguments: get the type argument and put it into the list_type_args
+    }
+    while(node = TREE_CHAIN(node) );
+
+    //write on temporary_file.c the type arguments
+    int count =0;
+    //it is necessary jump the last element that its always (a void type) not necessary
+    for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
+      
+      headerfile << "int switch"<< count << ", " << *x << " param" << count << ", void* (*userfunc"<<count<<")()";
+      if(count != list_type_args.size()-2){
+	headerfile << ", ";
+      }
+    }
+    headerfile << "); " << endl;
+    headerfile << endl;  
+  }
+  
+
+  headerfile << "#endif" << endl;
+  headerfile.close();
+}
+
+extern "C"
+void write_function_on_file(){
+
+  cout << "-- Write function calls to mock into the temporary file: temporary_file.c "<< endl; 
+  myfile.open("temporary_file.cpp");
+  myfile << "#include \"helper.h\" "<< endl;
+  myfile << "extern \"C\" {"<< endl;
+  myfile << "#include <string.h>//strcmp()" << endl;
+  // myfile << "#include \"temporary_file.h\""<< endl;
+  myfile << "#include <stdio.h>"<< endl;
+  myfile << "#include <stdlib.h>"<< endl;
+  //myfile << "#include \"helper.h\""<< endl;
+  myfile << "}"<< endl;
+ 
+  myfile << "#include <list>"<< endl;
+  myfile << "#include <iostream>" << endl;
+
+  myfile << endl;
+
+  myfile << "using namespace std;" << endl;
+  //============
+  write_structs();
+  myfile << endl;
+
+  write_expectation_functions();
+  write_external_functions();
   myfile.close();
 }
 
-
-
-extern "C" 
-void cb_plugin_finish(void *gcc_data, void *user_data){
-  cout << "****** EVENT PLUGIN_FINISH *******" << endl;
-  cout << "Read list_functions:"<< endl;
-  cout << endl;
-
-
-  //print_list(list_functions);
-
-
-  for (list<tree_node*>::iterator it = list_functions.begin(); it != list_functions.end(); ++it){
-    //  tree_node *node = reinterpret_cast<tree_node*>(it);
-    print_declarationfunction(*it);
-  }
-  cout << endl;
-
-  cout << "Read list_functions_call_without_body: "<< endl;
-  cout << endl;
-
-  for (list<tree_node*>::iterator it = list_functions_call_without_body.begin(); it != list_functions_call_without_body.end(); ++it){
-    //  tree_node *node = reinterpret_cast<tree_node*>(it);
-    print_declarationfunction(*it);
-  }
-  cout << endl;
- 
-  
-  //Find the functions to mock
+void find_functions_to_mock(){
  
   for (list<tree_node*>::iterator it =list_functions_call_without_body.begin(); it !=list_functions_call_without_body.end(); ++it){      
     bool isPresent = false;
@@ -525,13 +771,28 @@ void cb_plugin_finish(void *gcc_data, void *user_data){
     }
   }
 
-  cout<<"Functions to mock" <<endl;
-  for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
-    print_declarationfunction(*it);
-  }
-  //  print_list(list_functions_tomock);
+}
+
+extern "C" 
+void cb_plugin_finish(void *gcc_data, void *user_data){
+  cout << "****** EVENT PLUGIN_FINISH *******" << endl;
+  cout << "Read list_functions:"<< endl;
+  cout << endl;
+  //print_list(list_functions);
+  print_list(list_functions);
+  cout << endl;
+  cout << "Read list_functions_call_without_body: "<< endl;
+  print_list(list_functions_call_without_body);
+  cout << endl;
+
+  find_functions_to_mock();
+
+  cout<<"Print Functions to mock" <<endl; 
+  print_list(list_functions_tomock);
   cout <<endl;
+
   write_function_on_file();
+  //write_header();
 }
 
 extern "C" int

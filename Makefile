@@ -1,26 +1,33 @@
 GXX := g++
 GCC := gcc
+CXXFLAGS := -Wshadow
 
 .PHONY: testc testcc
 
-all: testc hello.o temporary_file.o ris
 
-ris: temporary_file.o hello.o
-	$(GCC) -o ris hello.o temporary_file.o
+result: temporary_file.o hello.o testhello.o helper.o 
+	$(GXX) -o result hello.o temporary_file.o testhello.o helper.o
 
-temporary_file.o: temporary_file.c
-	$(GCC) -c temporary_file.c
+testhello.o: testhello.c 
+	$(GCC) -c testhello.c
+
+temporary_file.o: temporary_file.cpp 
+	$(GXX) -c temporary_file.cpp 
+
+temporary_file.cpp: testc
+
+helper.o: helper.cpp helper.h
+	$(GXX) -c helper.cpp
 
 hello.o: hello.c
-	$(GCC) -c hello.c
+	$(GCC) -c hello.c 
 
 testc: hello.c plugin.so
 	$(GCC) -g -S -fplugin=./plugin.so hello.c
 
-testcc: hello.c plugin.so
-	$(GXX) -g -S -fplugin=./plugin.so hello.c
-
 plugin.so: plugin-3.cxx
 	@echo Compiling plugin.so
-	$(GXX) -g -I`$(GXX) -print-file-name=plugin`/include -fPIC -shared plugin-3.cxx -o plugin.so
+	$(GXX) $(CXXFLAGS) -g -I`$(GXX) -print-file-name=plugin`/include -fPIC -shared plugin-3.cxx -o plugin.so
 
+clean:
+	rm -f plugin.so hello.o temporary_file.o temporary_file.cpp testhello.o result temporary_file.h.gch temporary_file.h 
