@@ -15,7 +15,7 @@ int myfunction_for_test(int x){
 void testhello(){
 
   expect_extfunc2(VALUE(5.4),VALUE(27));
-  expect_extfunc1(USER_FUNCTION(&myfunction_for_test,4));
+  expect_extfunc1(USER_FUNCTION(&myfunction_for_test));
   expect_extfunc4(STRING("Hello!"));
   function(2,3);
 }

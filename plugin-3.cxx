@@ -341,6 +341,12 @@ manage_types(tree nodetype, bool isPuntator)
   if(isPuntator)
     cout << "PUNTATOR to an: "<< endl;
   debug_tree(nodetype);
+  //cout << TYPE_QUAL_VOLATILE(nodetype) << endl;
+  /*if(CP_TYPE_VOLATILE_P(nodetype) == 0 ){
+    cout << endl;
+    cout << " VOLATILE TYPE " <<endl;
+    cout << endl;
+    }*/
   //  cout << "Node Type: " <<  tree_code_name[TREE_CODE(nodetype)] << endl;
   switch(TREE_CODE(nodetype)){
    case INTEGER_TYPE: 
@@ -399,9 +405,9 @@ manage_types(tree nodetype, bool isPuntator)
   default:
      break;
   }
-  // cout << endl;
-  // cout << "Into Manage types. result= "<< result << endl;
-  // cout << endl;
+   cout << endl;
+   cout << "Into Manage types. result= "<< result << endl;
+   cout << endl;
   return result;
 }
 
@@ -738,6 +744,9 @@ void write_function_on_file(){
   myfile << endl;
 
   write_expectation_functions();
+
+  cout << "debug " << endl;
+
   write_external_functions();
   myfile.close();
 }
