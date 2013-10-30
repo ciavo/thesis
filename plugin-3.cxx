@@ -33,7 +33,7 @@ extern "C"
 #include <list>
 #include <iostream>
 #include <fstream>
-
+//#include <algorithm>
 using namespace std;
 
 int plugin_is_GPL_compatible;
@@ -98,9 +98,11 @@ manage_function_decl(tree func_decl_node ){
   cout << "---- MANAGE FUNCTION DECLARATION ---- " << endl;
  
   list_functions_call_without_body.push_back(func_decl_node);
-  
+  cout << endl;
   //  cout << "debug 1.1" << endl;
   myprint_declaration(func_decl_node);
+  debug_tree(func_decl_node);
+  cout << endl;
   /*
   // debug_tree(func_decl_node); 
   cout << "---GET THE RETURN TYPE---"<< endl;
@@ -340,7 +342,7 @@ manage_types(tree nodetype, bool isPuntator)
   cout << " *** Into manage_types() ***" << endl;
   if(isPuntator)
     cout << "PUNTATOR to an: "<< endl;
-  debug_tree(nodetype);
+  //debug_tree(nodetype);
   //cout << TYPE_QUAL_VOLATILE(nodetype) << endl;
   /*if(CP_TYPE_VOLATILE_P(nodetype) == 0 ){
     cout << endl;
@@ -539,19 +541,22 @@ void write_external_functions(){
     }
     myfile << "){" << endl;
     myfile << " // check expectations " << endl;
-    myfile << "struct Mock_" << function_name << "*obj  = list_"<<function_name << ".front();" << endl;
-    myfile << "int ris;" << endl;
+    myfile << "  struct Mock_" << function_name << "*obj  = list_"<<function_name << ".front();" << endl;
+    myfile << "  int ris;" << endl;
+    myfile << "  void* return_value;" << endl;
+    myfile << "  bool check_parameter = true;" << endl;
     count = 0;
     for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
       myfile << "  switch( obj->switch"<< count <<" ){"<< endl;
-      myfile << "    case ANY_VALUE: "<< endl; 
+      myfile << "    case ANY_VALUE: "<< endl;      
       myfile << "      break; "<< endl; 
 
 
       myfile << "    case CHECK_PARAMS_VALUE: "<< endl; 
       myfile << "      if( obj->param" << count << " != param" << count <<" ){ "<< endl; 
       myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
-      myfile << "      } "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
       myfile << "      break; "<< endl;
 
 
@@ -559,8 +564,9 @@ void write_external_functions(){
       myfile << "      ris = obj->userfunc"<< count << "(param" << count << ");" << endl;  
       //myfile << "      printf(\"******* ris = %d \\n \",ris);" << endl;
       myfile << "      if( ris !=0 ){ "<< endl; 
-      myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
-      myfile << "      } "<< endl; 
+      myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl;
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;
       myfile << "      break; "<< endl;
 
       string type(*x);
@@ -568,16 +574,26 @@ void write_external_functions(){
 	myfile << "    case CHECK_PARAMS_STRING: "<< endl; 
 	myfile << "      if( strcmp(obj->param" << count << ", param" << count <<")!=0 ){ "<< endl; 
 	myfile << "         manage_errors(DIFFERENT_PARAMETER, \""<<function_name<<"\"); "<< endl; 
-	myfile << "      } "<< endl; 
+	myfile << "         check_parameter = false;" << endl;
+	myfile << "      }"<< endl;
 	myfile << "      break; "<< endl;
       }
 
       myfile << "    default: "<< endl; 
       myfile << "      break; "<< endl; 
       myfile << "  }//close switch "<< endl;
-      myfile << endl;
     }
 
+     myfile << "  if(check_parameter == true){" << endl;
+     myfile << "        return_value = check_expectations(obj->list_expectations, \"" << function_name << "\");" << endl;
+     myfile << "        if(return_value == NULL){return NULL;} //Error in check_expectations" << endl;
+     myfile << "  }"<< endl;
+
+    if(return_type.compare("void")!=0 ){
+	myfile <<"  "<< return_type << " casting_return_value = *("<<return_type<<"*) return_value;" << endl;
+	myfile <<"  return casting_return_value;" << endl;
+    }
+    myfile << endl;
     
     myfile << "}" << endl;
     myfile << endl;  
@@ -596,7 +612,7 @@ void  write_expectation_functions(){
     string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
     tree_node *tn =  reinterpret_cast<tree_node*>(*it);
     tree get_decl_result = DECL_RESULT(tn);   
-    // string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ),false);
+    string return_type =  manage_types(TREE_TYPE( TREE_TYPE(*it) ),false);
     //myfile << return_type << " " << function_name << "("; 
     myfile << "extern \"C\"" << endl;
     myfile << "void expect_" << function_name << "(";
@@ -617,21 +633,70 @@ void  write_expectation_functions(){
 	myfile << ", ";
       }
     }
-    myfile << "){" << endl;
+    myfile << ", int startvararg, ...){" << endl;
     myfile << "  printf(\"INTO: "<<function_name<<" \\n\" );" << endl;
 
     string namestruct = "Mock_"+ function_name;
-    myfile << "  struct "<< namestruct<< " *obj = (struct "<< namestruct <<"*)  malloc(sizeof(struct " << namestruct << "));" << endl;
-    
+    myfile << "  struct "<< namestruct<< " *obj = new "<< namestruct <<"();" << endl;
+     myfile << "  list_"<< function_name << ".push_back(obj);"<< endl;     
    
-    for (count = 0;count < list_type_args.size()-1 ;  count++){ //size()-1 because we need always to skip the last argument
-      //myfile << " printf(\"param"<<count<<": %g, switch"<<count<<": %g  \\n \", param"<<count<< " , switch"<<count<<" );"<< endl;
-      myfile << "  printf(\"param"<<count<<":%g \\n\",param"<<count<<" );" << endl;
+    for (count = 0; count < list_type_args.size()-1 ;  count++){ //size()-1 because we need always to skip the last argument. size()-2 because here I dont consider the "int startvararg" parameter.
+     
+ //myfile << " printf(\"param"<<count<<": %g, switch"<<count<<": %g  \\n \", param"<<count<< " , switch"<<count<<" );"<< endl;
+     
       myfile << "  obj->switch" << count << "= switch"<< count<<";"<< endl; 
       myfile << "  obj->param" << count << "= param"<< count<<";"<< endl;
       myfile << "  obj->userfunc" << count << "= userfunc"<< count<<";"<< endl;
+      myfile << endl;
     }
-    myfile << "  list_"<< function_name << ".push_front(obj);"<< endl;     
+
+    myfile << endl;
+    myfile << "//Add Times Expectations" << endl;
+    myfile << "  if(startvararg == NO_MORE_PARAMETERS ){ // use the default setting" << endl;
+    myfile << "   printf(\"no more parameters  \\n \");" << endl;
+    myfile << "   return;" << endl;
+    myfile << "  }" << endl;
+    myfile << "  va_list ap; " << endl;
+    myfile << "  va_start(ap, startvararg);" << endl;
+    myfile << "  int time_value;" << endl;
+    //  myfile << "  printf(\"startvararg: %d\\n \", startvararg);" << endl;
+    myfile << "  if(startvararg == TIMES){" << endl;
+    myfile << "    time_value = va_arg(ap,int);" << endl;
+
+    myfile << "    struct Expectation* exp = new Expectation(); "<< endl;  
+    myfile << "    exp->type_expectation = startvararg; " << endl;
+    myfile << "    int* p = (int*)malloc(sizeof(int)); " << endl;
+    myfile << "    *p = time_value;" << endl;
+    myfile << "    exp->returnvalue = (void*)p;" << endl;
+    myfile << "    obj->list_expectations.push_back(exp);" << endl;
+    myfile << "  }else{ " << endl; 
+    myfile << "    time_value = va_arg(ap,int); // to jump the \"time_value parameter\" used from the TIMES macro " << endl;
+    myfile << "  }" << endl;
+    myfile << "  //Manage WILLONCE and REPEADETLY" << endl;
+    
+    if(return_type.compare("void")!=0 ){  // you do not need to manage return type for function that return void.  
+
+
+      myfile << "  int type_expectation; // the type of the variable is as the type return function" << endl;
+      myfile << "  " << return_type << " return_value;" << endl;
+      myfile << "  for(type_expectation = va_arg(ap, int); type_expectation != NO_MORE_PARAMETERS; type_expectation = va_arg(ap,int) ){" << endl;
+      myfile << "    struct Expectation* exp = new Expectation(); "<< endl;
+      myfile << "    return_value = va_arg(ap, " << return_type << ");// the return type is always as the return type of the orginal function. We are treatting just WILLONCE and REPEADETLY " << endl;
+      myfile << "    "<< return_type << "* p = ("<<return_type<<"*)malloc(sizeof("<<return_type<<"));" << endl;
+      myfile << "    *p = return_value;" << endl;
+      myfile << "    exp->type_expectation = type_expectation; " << endl;
+      myfile << "    exp->returnvalue = (void*)p; " << endl; 
+      //  myfile << "    printf(\"type_expectation: %d  \\n\", type_expectation);  " << endl;
+      //myfile << "    printf(\"return value: %d \\n\",return_value);//occhio che non e sempre di tipo intero  " << endl;   
+      myfile << "    obj->list_expectations.push_back(exp);" << endl;
+      myfile << "  }" << endl;
+    }
+    myfile << "  va_end(ap);" << endl;
+      
+
+
+
+   
       
 
     myfile << "}" << endl;
@@ -659,8 +724,7 @@ void write_structs(){
    tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );//get function's arguments
    do{
      list_type_args.push_back( manage_types(TREE_VALUE(node), false ) );//for each arguments: get the type argument and put it into the list_type_args
-   }
-   while(node = TREE_CHAIN(node) );
+   }while(node = TREE_CHAIN(node) );
    
    //write on temporary_file.c the type arguments
    int count =0;
@@ -670,8 +734,12 @@ void write_structs(){
      myfile << "  int switch"<< count << ";" <<"  " << *x << " param" << count << ";" << " int (*userfunc" << count << ")("<< *x << " x);"  << endl;
      
    }
+   myfile << "  list<Expectation*> list_expectations;" << endl;
    myfile << "};" << endl;
    myfile << "list<Mock_"<< function_name << "*> list_" << function_name << ";"<< endl; 
+   // string up_function_name = function_name;
+   //transform(up_function_name.begin(), up_function_name.end(), up_function_name.begin(), toupper);
+   //myfile << "#define EXPECT_" << function_name << "(...) expect_" << function_name << "( __VA_ARGS__, NO_MORE_PARAMETERS)" << endl; 
    myfile << endl;
  }
 
@@ -680,6 +748,7 @@ void write_structs(){
  
 extern "C"
 void write_header(){
+  
   headerfile.open("temporary_file.h");
   headerfile << "#ifndef TEMPORARYFILE_H"<< endl;
   headerfile << "#define TEMPORARYFILE_H" << endl;
@@ -690,27 +759,30 @@ void write_header(){
     cout << endl;
     string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
     tree_node *tn =  reinterpret_cast<tree_node*>(*it);
-    tree get_decl_result = DECL_RESULT(tn);   
-   
-    headerfile << "extern void expect_" << function_name << "(";
+    tree get_decl_result = DECL_RESULT(tn);      
+    
+    headerfile << "#define EXPECT_" << function_name << "(...) expect_" << function_name << "( __VA_ARGS__, NO_MORE_PARAMETERS)" << endl;
  
+    
+    headerfile << "void expect_" << function_name << "("; 
     tree node = TYPE_ARG_TYPES( TREE_TYPE(*it) );//get function's arguments
     do{
       list_type_args.push_back( manage_types(TREE_VALUE(node),false ));//for each arguments: get the type argument and put it into the list_type_args
     }
     while(node = TREE_CHAIN(node) );
-
     //write on temporary_file.c the type arguments
     int count =0;
     //it is necessary jump the last element that its always (a void type) not necessary
     for (list<string>::iterator x = list_type_args.begin();count < list_type_args.size()-1 ; ++x, count++){
       
-      headerfile << "int switch"<< count << ", " << *x << " param" << count << ", void* (*userfunc"<<count<<")()";
+      headerfile << "int switch"<< count << ", " << *x << " param" << count << ", int (*userfunc"<<count<<")("<<*x<<" x)";
       if(count != list_type_args.size()-2){
 	headerfile << ", ";
       }
     }
-    headerfile << "); " << endl;
+    headerfile << ",...); " << endl;
+   
+
     headerfile << endl;  
   }
   
@@ -726,6 +798,7 @@ void write_function_on_file(){
   myfile.open("temporary_file.cpp");
   myfile << "#include \"helper.h\" "<< endl;
   myfile << "extern \"C\" {"<< endl;
+  myfile << "  #include <stdarg.h>" << endl;
   myfile << "#include <string.h>//strcmp()" << endl;
   // myfile << "#include \"temporary_file.h\""<< endl;
   myfile << "#include <stdio.h>"<< endl;
@@ -737,15 +810,16 @@ void write_function_on_file(){
   myfile << "#include <iostream>" << endl;
 
   myfile << endl;
-
+  
   myfile << "using namespace std;" << endl;
   //============
+cout << "debug 1 " << endl;
   write_structs();
   myfile << endl;
-
+cout << "debug 2 " << endl;
   write_expectation_functions();
 
-  cout << "debug " << endl;
+  cout << "debug 3 " << endl;
 
   write_external_functions();
   myfile.close();
@@ -801,7 +875,7 @@ void cb_plugin_finish(void *gcc_data, void *user_data){
   cout <<endl;
 
   write_function_on_file();
-  //write_header();
+  write_header();
 }
 
 extern "C" int
