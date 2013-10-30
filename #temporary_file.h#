@@ -1,9 +1,0 @@
-#ifndef TEMPORARYFILE_H
-#define TEMPORARYFILE_H
-
-expect_foo();
-#define EXPECT_foo(...) expect_foo( __VA_ARGS__, NO_MORE_PARAMETERS)
-
-#define EXPECT_func(...) expect_func( __VA_ARGS__, NO_MORE_PARAMETERS)
-
-#endif
