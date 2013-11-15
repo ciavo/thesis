@@ -17,32 +17,21 @@ struct Expectation {
 };
 
 //VALUE(x)
-#define CHECK_PARAMS_VALUE 0
-#define ANY_VALUE 1
+#define CHECK_PARAMS_VALUE  0
+#define ANY_VALUE           1
 //STRING(x)
 #define CHECK_PARAMS_STRING 2
-
-
-
-/* ======================================
-  Generic Comparison
-
-No     Eq(value) or value	argument == value
-No     Ge(value)	argument >= value
-No     Gt(value)	argument > value
-No     Le(value)	argument <= value
-No     Lt(value)	argument < value
-No     Ne(value)	argument != value
-No     IsNull()	argument is a NULL pointer (raw or smart).
-No     NotNull()	argument is a non-null pointer (raw or smart).
-No     Ref(variable)	argument is a reference to variable.
-No     TypedEq<type>(value)	argument has type type and is equal to value. You may need to use this instead of Eq(value) when the mock function is overloaded.
-
-Yes    USER_FUNCTION(x)   x is the address of the function to use. Return 0 if the test is positive. Otherwise the test will fail. 
+/*    USER_FUNCTION(x)   x is the address of the function to use. Return 0 if the test is positive. Otherwise the test will fail. 
 */
-
 //USER_FUNCTION(x)
-#define USER_FUNCTION 3
+#define USER_FUNCTION       3
+
+#define Gt                  4
+#define Lt                  5
+#define Ge                  6
+#define Le                  7
+#define Ne                  8
+
 
 
 // ===== End Generic Comparison =======
@@ -51,6 +40,12 @@ Yes    USER_FUNCTION(x)   x is the address of the function to use. Return 0 if t
 
 #define DIFFERENT_PARAMETER       100
 #define TIMES_CALLS_EXCEEDED      101
+#define Gt_ERROR                  102
+#define Lt_ERROR                  103
+#define Ge_ERROR                  104
+#define Le_ERROR                  105
+#define Ne_ERROR                  106
+
 // ===== End Errors ============
 
 /*========== Expectations ===================== 
@@ -72,6 +67,7 @@ Yes    USER_FUNCTION(x)   x is the address of the function to use. Return 0 if t
 
 
 void* check_expectations(list<Expectation*>& list_exp, string function_name);
+void check_expectations_test_finished(list<Expectation*>& list_exp, string function_name);
 
 
 

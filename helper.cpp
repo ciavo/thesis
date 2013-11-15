@@ -8,14 +8,47 @@ void manage_errors(int  error_type, string function_name){
      cout << "From "<< function_name << endl;
      cout << "Parameters do not matching "<< endl;
      break;
+  
   case  TIMES_CALLS_EXCEEDED:
      cout << "From "<< function_name << endl;
      cout << "Time calls exceeded! "<< endl;
+     break;
+  
+  case Gt_ERROR:
+     cout << "From "<< function_name << endl;
+     cout << "The value received from the function called is not GREATER of one set in the expectation "<< endl;
+     break;
+  
+  case  Lt_ERROR:
+     cout << "From "<< function_name << endl;
+     cout << "The value received from the function called is not LESS of one set in the expectation "<< endl;
+     break;
+  
+  case  Le_ERROR:
+     cout << "From "<< function_name << endl;
+     cout << "The value received from the function called is not LESS or EQUAL of one set in the expectation "<< endl;
+     break;
+
+  case  Ge_ERROR:
+     cout << "From "<< function_name << endl;
+     cout << "The value received from the function called is not GREATER or EQUAL of one set in the expectation "<< endl;
+     break;
+  
+  case  Ne_ERROR:
+     cout << "From "<< function_name << endl;
+     cout << "The value received from the function called is not EQUAL of one set in the expectation "<< endl;
+     break;
+    
+ 
   default:
     break;
   }
   cout << "=================" << endl;
 
+}
+
+void check_expectations_test_finished(list<Expectation*>& list_exp, string function_name){
+  return;
 }
 
 void* check_expectations(list<Expectation*>& list_exp, string function_name){

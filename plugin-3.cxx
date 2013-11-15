@@ -240,7 +240,7 @@ navigate_expression(tree my_tree){
     break;
 
   case CALL_EXPR: // manage the function
-    cout << "INTO CALL EXPRESSION OOOOOOOOOOOOOOO" << endl;
+    cout << "---- INTO CALL EXPRESSION ---------" << endl;
     manage_call_expr(my_tree, -1);
     debug_tree(my_tree);
     break;
@@ -404,6 +404,7 @@ manage_types(tree nodetype, bool isPuntator)
     //debug_tree(TREE_TYPE(nodetype));
     result = manage_types(TREE_TYPE(nodetype),true)+"*";
     break;
+  
   default:
      break;
   }
@@ -559,6 +560,50 @@ void write_external_functions(){
       myfile << "      }"<< endl;      
       myfile << "      break; "<< endl;
 
+      myfile << "    case Gt: "<< endl; 
+      myfile << "      if( obj->param" << count << " >= param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(Gt_ERROR, \""<<function_name<<"\"); "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
+      myfile << "      break; "<< endl;
+
+
+      myfile << "    case Lt: "<< endl; 
+      myfile << "      if( obj->param" << count << " <= param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(Lt_ERROR, \""<<function_name<<"\"); "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
+      myfile << "      break; "<< endl;
+
+
+
+      myfile << "    case Ge: "<< endl; 
+      myfile << "      if( obj->param" << count << " > param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(Ge_ERROR, \""<<function_name<<"\"); "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
+      myfile << "      break; "<< endl;
+
+
+      myfile << "    case Le: "<< endl; 
+      myfile << "      if( obj->param" << count << " < param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(Le_ERROR, \""<<function_name<<"\"); "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
+      myfile << "      break; "<< endl;
+ 
+
+      myfile << "    case Ne: "<< endl; 
+      myfile << "      if( obj->param" << count << " == param" << count <<" ){ "<< endl; 
+      myfile << "         manage_errors(Ne_ERROR, \""<<function_name<<"\"); "<< endl; 
+      myfile << "         check_parameter = false;" << endl;
+      myfile << "      }"<< endl;      
+      myfile << "      break; "<< endl;
+ 
+
+
+
+
 
       myfile << "    case USER_FUNCTION: "<< endl; 
       myfile << "      ris = obj->userfunc"<< count << "(param" << count << ");" << endl;  
@@ -586,10 +631,12 @@ void write_external_functions(){
 
      myfile << "  if(check_parameter == true){" << endl;
      myfile << "        return_value = check_expectations(obj->list_expectations, \"" << function_name << "\");" << endl;
-     myfile << "        if(return_value == NULL){return NULL;} //Error in check_expectations" << endl;
-     myfile << "  }"<< endl;
-
-    if(return_type.compare("void")!=0 ){
+     if(return_type.compare("void")!=0 ){
+       myfile << "        if(return_value == NULL){return NULL;} //Error in check_expectations" << endl;
+     }
+       myfile << "  }"<< endl;
+     
+     if(return_type.compare("void")!=0 ){
 	myfile <<"  "<< return_type << " casting_return_value = *("<<return_type<<"*) return_value;" << endl;
 	myfile <<"  return casting_return_value;" << endl;
     }
@@ -786,10 +833,29 @@ void write_header(){
     headerfile << endl;  
   }
   
-
-  headerfile << "#endif" << endl;
-  headerfile.close();
+ headerfile << "#define TEST_FINISHED testCompleted()" << endl;
+ headerfile << "void testCompleted();" << endl;
+ headerfile << "#endif" << endl;
+ headerfile.close();
 }
+
+extern "C"
+void write_check_testCompleted_function(){
+  myfile << endl;
+  myfile << "//When the test is finished we have to see if all the expectations have been respected or not." << endl;
+  myfile << "extern \"C\" " << endl;
+  myfile << "void testCompleted(){"<<endl;
+  for (list<tree_node*>::iterator it = list_functions_tomock.begin(); it != list_functions_tomock.end(); ++it){
+    
+    myfile << endl;
+    string function_name =  IDENTIFIER_POINTER(DECL_NAME(*it)); 
+    myfile << "  struct Mock_"<< function_name <<"* obj_"<<function_name <<" = list_"<< function_name << ".front();" << endl;
+    myfile << "  check_expectations_test_finished(obj_"<< function_name <<"->list_expectations, \""<<function_name<<"\");" << endl;
+  
+  }    
+  myfile << "}"<< endl;
+}
+
 
 extern "C"
 void write_function_on_file(){
@@ -822,12 +888,14 @@ cout << "debug 2 " << endl;
   cout << "debug 3 " << endl;
 
   write_external_functions();
+  write_check_testCompleted_function();
+
   myfile.close();
 }
 
 void find_functions_to_mock(){
  
-  for (list<tree_node*>::iterator it =list_functions_call_without_body.begin(); it !=list_functions_call_without_body.end(); ++it){      
+  for (list<tree_node*>::iterator it =list_functions_call_without_body.begin(); it !=list_functions_call_without_body.end(); ++it){     
     bool isPresent = false;
     string source_file = DECL_SOURCE_FILE(*it);
     int number_line =  DECL_SOURCE_LINE(*it);

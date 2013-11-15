@@ -1,34 +1,37 @@
 #include <stdio.h>
-//#include "hello.h"
+
 double foo(double x);
-void bar(char*  stringa);
 int  func(double x, int y);
 
+void bar(char*  stringa);
+//extern int xxxxxx;
 int function(int x, int y)
 {
+
   double z = foo(7.4);
-  printf("%g\n",foo(7.4)); 
+  printf("%g\n",z); 
+  
+  z = foo(7.4); 
+  printf("%g\n",z);
 
- /*
-  printf(" %g \n", foo(7.4));
-  printf(" %g \n", foo(7.4));
-  printf(" %g \n", foo(7.4));
-  printf(" %g \n", foo(7.4));
- 
-  */
   z = foo(7.4); 
  printf("%g\n",z);
 
   z = foo(7.4); 
  printf("%g\n",z);
+
   z = foo(7.4); 
- printf("%g\n",z);
-  z = foo(7.4); 
- printf("%g\n",z); 
+  printf("%g\n",z); //foo is called 5 times
+
+  // z = foo(7.4);
 
   int w =  func(5.4, 27);
-  printf("%d\n",w);
-  //bar("Hello!");  
+  printf("from func: %d\n",w);
+
+  bar("Hello!");
+  //bar("another Hello!");
+  // bar("Hello!");
+
   return 1;
   // return extfunc_1(4); Check!
 }
