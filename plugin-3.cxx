@@ -21,9 +21,9 @@ extern "C"
 #include "tm.h"
 
 #include "diagnostic.h"
-#include "c-common.h"
-#include "c-pragma.h"
-#include "cp/cp-tree.h"
+  //#include "c-common.h"
+  //#include "c-pragma.h"
+  //#include "cp/cp-tree.h"
 }
 #include <set>
 #include <string>
