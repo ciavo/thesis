@@ -38,8 +38,7 @@ void manage_errors(int  error_type, string function_name){
      cout << "From "<< function_name << endl;
      cout << "The value received from the function called is not EQUAL of one set in the expectation "<< endl;
      break;
-    
- 
+  
   default:
     break;
   }
@@ -47,7 +46,33 @@ void manage_errors(int  error_type, string function_name){
 
 }
 
+void manage_times_errors(int  error_type, string function_name, int total_calls, int made_calls){
+  cout << "=== TEST FAIL ===" << endl;
+  switch(error_type){
+    case TIMES_CALLS_LESSER:
+      cout << "The function \""<< function_name << "\" should be called " << total_calls;
+      cout << (total_calls > 1? " times" : " time") << endl;
+      cout << "but it is called just " << made_calls << (made_calls > 1? " times":" time") << endl;
+      break;
+  default:
+    break;
+  }
+  cout << "=================" << endl;
+}
 void check_expectations_test_finished(list<Expectation*>& list_exp, string function_name){
+  
+  //The first expectation it has to be always TIMES. In future can be also AT_MOST_TIMES or AT_LEAST_TIMES
+  list<Expectation*>::iterator it_exp = list_exp.begin();
+  Expectation* exp_times = *it_exp;
+  int total_number_calls = *(int*)exp_times->returnvalue;
+  
+  switch(exp_times->type_expectation){//I check if the expectation if TIMES. In the future it can be AT_MOST_TIMES or AT_LEAST_TIMES
+     case TIMES: //we need to check just if the number calls made are less then the total_number_calls setted in the expectation because the check for the "greater" case is done directly in the "check_expectations" function.
+      if( exp_times->number_calls < total_number_calls ){
+	manage_times_errors(TIMES_CALLS_LESSER , function_name, total_number_calls, exp_times->number_calls );
+      }
+      break;
+  }
   return;
 }
 

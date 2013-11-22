@@ -9,7 +9,7 @@ using namespace std;
 
 struct Expectation {
   int type_expectation; //TIMES, WILLONCE, REPEADETLY
-  void* returnvalue;
+  void* returnvalue;   //for TIMES it contains the number of times that the function should be called. For WILLONCE and REAPEADETLY contain the return value.
   int number_calls ; // TIMES use to keep trace of the number of times that we call the corrispondent function. 
   Expectation(){
     number_calls = 0; 
@@ -45,6 +45,7 @@ struct Expectation {
 #define Ge_ERROR                  104
 #define Le_ERROR                  105
 #define Ne_ERROR                  106
+#define TIMES_CALLS_LESSER        107
 
 // ===== End Errors ============
 

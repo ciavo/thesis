@@ -20,7 +20,7 @@ void testhello(){
 	     );
   
   EXPECT_foo(USER_FUNCTION(&myfunction_for_test),
-	    TIMES(5),
+	    TIMES(6),
 	    WILLONCE( RETURN(5.6) ),
 	    WILL_REPEATEDLY( RETURN(4.8) )
 	    );

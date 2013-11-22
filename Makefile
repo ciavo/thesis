@@ -3,8 +3,8 @@ GCC := gcc
 CXXFLAGS := -Wshadow -Wall
 CFLAGS := -Wshadow -Wall
 
-SYSTEM_UNDER_TEST := hello
-TEST_FILE := testhello
+SYSTEM_UNDER_TEST := system_under_test
+TEST_FILE := test_sut
 
 .PHONY: testc testcc
 

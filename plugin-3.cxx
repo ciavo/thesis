@@ -21,9 +21,9 @@ extern "C"
 #include "tm.h"
 
 #include "diagnostic.h"
-#include "c-common.h"
-#include "c-pragma.h"
-#include "cp/cp-tree.h"
+  //#include "c-common.h"
+  //#include "c-pragma.h"
+  //#include "cp/cp-tree.h"
 }
 #include <set>
 #include <string>
@@ -181,13 +181,20 @@ manage_goto_expr(tree my_tree, int i){
 extern "C" void //decl_expr is a generail structure. It is not used only into the function. Keep attention!
 manage_decl_expr(tree my_tree,int i){
   cout << " --- Into manage_decl_expr() ---" << endl;
+
   tree node = TREE_OPERAND(my_tree,0);
   debug_tree(node);
   
   switch(TREE_CODE(node)){
   case VAR_DECL:
-    // cout << "Into var_decl !" << endl;
-    navigate_expression(DECL_INITIAL(node));
+    cout << "Into var_decl !" << endl;
+    //tree body_var_decl = DECL_INITIAL(node);
+    cout << "call navigate_expression" << endl;
+    //  cout << "decl_size: " << DECL_SIZE(node);
+    if(!DECL_COMMON_CHECK(node)){     
+      cout << "decl_size: " << DECL_INITIAL(node);
+      navigate_expression(DECL_INITIAL(node));
+    }
     break;
   default:
     break;
@@ -249,7 +256,7 @@ navigate_expression(tree my_tree){
     break;
   }
 }
-
+n
 
 extern "C" void
 manage_modify_expr(tree my_tree, int i)
@@ -959,7 +966,7 @@ plugin_init (plugin_name_args* info,
 
   // Disable assembly output.
   //
-  asm_file_name = HOST_BIT_BUCKET;
+  //asm_file_name = HOST_BIT_BUCKET;
   
   // Register callbacks.
   //
