@@ -10,9 +10,9 @@
 #define STRING(x)        2, x, NULL
 
 //USER_FUNCTION(x) x: (*function)() The function return 0 if the test is postive. Otherwise the test will fail.
-#define USER_FUNCTION(x) 3, 0, x 
+#define USER_FUNCTION(x) 3, NULL, x 
 
-//y is the parameter  got from the mocked function call
+//y is the parameter got from the mocked function call
 #define Gt(x)            4, x, NULL    //  x > y
 #define Lt(x)            5, x, NULL    //  x < y
 #define Ge(x)            6, x, NULL    //  x >= y
@@ -20,10 +20,12 @@
 #define Ne(x)            8, x, NULL    //  x != y
 
 #define TIMES(x)           200, x
-#define WILLONCE(x)        201, x
+#define WILL_ONCE(x)        201, x
 #define WILL_REPEATEDLY(x) 202, x
 #define RETURN(x)          x
 
+#define TIMES_AT_LEAST(x)      203, x
+#define TIMES_AT_MOST(x)       204, x
 
 
 #define NO_MORE_PARAMETERS -256

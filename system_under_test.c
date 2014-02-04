@@ -1,22 +1,14 @@
 #include <stdio.h>
+//#include "system_under_test.h"
 
-int foo(int x);
+//void set_sex(struct person, enum SEX);
+void LPP_internalSetHwTimerCallback( void (*timerCallback_func)(void));
+void foo(double x);
 
-
-int bar(){
-  return 1;
-
-}
-int baz();
-
+void func();
 int function_to_test()
 {
-  baz();  
-  //int w =  foo(6);
-int w;  
-int x = bar();
- printf("hello world!");
-  printf("print w: %d \n",w);
-  return w;
+  LPP_internalSetHwTimerCallback(func);
+    
+  return 1;
 }
-

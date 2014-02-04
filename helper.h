@@ -46,6 +46,8 @@ struct Expectation {
 #define Le_ERROR                  105
 #define Ne_ERROR                  106
 #define TIMES_CALLS_LESSER        107
+#define TIMES_CALLS_NEQUAL        108
+#define TIMES_CALLS_MORE          109
 
 // ===== End Errors ============
 
@@ -58,9 +60,12 @@ struct Expectation {
     .WillRepeatedly(action)                     Yes
     .RetiresOnSaturation();                     No
  */
-#define TIMES           200
-#define WILLONCE        201
+#define TIMES            200
+#define WILLONCE         201
 #define WILL_REPEATEDLY  202
+#define TIMES_AT_LEAST    203
+#define TIMES_AT_MOST     204
+
 #define NO_MORE_PARAMETERS -256
 
 

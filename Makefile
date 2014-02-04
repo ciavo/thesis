@@ -3,8 +3,8 @@ GCC := gcc
 CXXFLAGS := -Wshadow -Wall
 CFLAGS := -Wshadow -Wall
 
-SYSTEM_UNDER_TEST := system_under_test
-TEST_FILE := test_sut
+SYSTEM_UNDER_TEST := order
+TEST_FILE := test_order
 
 .PHONY: testc testcc
 
@@ -26,12 +26,12 @@ helper.o: helper.cpp helper.h
 $(SYSTEM_UNDER_TEST).o: $(SYSTEM_UNDER_TEST).c
 	$(GCC) $(CFLAGS) -g -c $(SYSTEM_UNDER_TEST).c  
 
-testc: hello.c plugin.so
+testc:  plugin.so $(SYSTEM_UNDER_TEST).c
 	$(GCC) $(CFLAGS) -g -S -fplugin=./plugin.so $(SYSTEM_UNDER_TEST).c
 
-plugin.so: plugin-3.cxx
+plugin.so: plugin-mocking.cxx
 	@echo Compiling plugin.so
-	$(GXX) $(CXXFLAGS) -g -I`$(GXX) -print-file-name=plugin`/include -fPIC -shared plugin-3.cxx -o plugin.so
+	$(GXX) $(CXXFLAGS) -g -I`$(GXX) -print-file-name=plugin`/include -fPIC -shared plugin-mocking.cxx -o plugin.so
 
 clean:
-	rm -f plugin.so temporary_file.o temporary_file.cpp result temporary_file.h.gch temporary_file.h helper.o temporary_file.cpp~ temporary_file.h~ helper.h~ temporary_file.c~ myframework.h~ plugin-3.cxx~ helper.cpp~ $(SYSTEM_UNDER_TEST) $(TEST_FILE).o $(SYSTEM_UNDER_TEST).o 
+	rm -f plugin.so temporary_file.o temporary_file.cpp result temporary_file.h.gch temporary_file.h helper.o temporary_file.cpp~ temporary_file.h~ helper.h~ temporary_file.c~ myframework.h~ helper.cpp~ $(SYSTEM_UNDER_TEST) $(TEST_FILE).o $(SYSTEM_UNDER_TEST).o  
