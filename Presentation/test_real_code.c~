@@ -1,0 +1,63 @@
+#include <stdio.h>
+
+#include "myframework.h"
+#include "temporary_file.h" //import MACROs for the expectation functions
+
+/*
+There are three way to import the user structs:
+1) define here the same structs used in the System Under Test 
+
+2) incude the header generated automatically by the plugin: "temporar_user_struct.h"  
+   ATTENTION: in this case the fileds' name will be different from the original struct
+
+3) include an your header with the same struct in the System Under Test  
+*/
+
+// #include "temporary_user_struct.h"
+// directly from the temporary_file.
+
+// return 0 if the test is POSITIVE. 
+int check_userdata(struct user_data x){
+  printf("myfunction_for_test!!! \n");
+  return 0;
+}
+
+
+void test_sut(){
+  
+  EXPECT___DLPDCPPE_handleCellActivateReq(
+					  USER_FUNCTION(&check_userdata),
+					  USER_FUNCTION(&check_userdata)
+					  TIMES(1);
+					  )
+  EXPECT___DLPDCPPE_handleCellActivateReq(
+					  USER_FUNCTION(&check_userdata),
+					  USER_FUNCTION(&check_userdata)
+					  TIMES(1);
+					  )
+EXPECT___DLPDCPPE_handleCellActivateReq(
+					  USER_FUNCTION(&check_userdata),
+					  USER_FUNCTION(&check_userdata)
+					  TIMES(1);
+					  )
+EXPECT___DLPDCPPE_handleCellActivateReq(
+					  USER_FUNCTION(&check_userdata),
+					  USER_FUNCTION(&check_userdata)
+					  TIMES(1);
+					  )
+EXPECT___DLPDCPPE_handleCellActivateReq(
+					  USER_FUNCTION(&check_userdata),
+					  USER_FUNCTION(&check_userdata)
+					  TIMES(1);
+					  )
+    DLPDCPPE_handleDciRequest();
+    // function_to_test(); //Execution: Call the function to test!
+
+}
+int main(int argc, char **argv)
+{
+  test_sut();
+  TEST_FINISHED;
+  return 1;
+}
+

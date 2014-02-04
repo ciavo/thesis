@@ -1,0 +1,5 @@
+typedef enum 
+{
+BBBASE_RTR_EXT_REF,
+BBBASE_RTR_INT_REF,
+}BBBASE_RTR_refModeE;
