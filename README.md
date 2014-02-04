@@ -1,6 +1,6 @@
 © 2014 Luca Ciavaglia. All rights reserved
 
-Master Thesis
+Master Thesis - Using compiler plugins for mocking C code
 
 Abstract
 
