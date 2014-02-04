@@ -21,3 +21,5 @@ The thesis has been completely realized at the Baseband Tools department of
 Ericsson AB in Linköping, Sweden.
 
 For more detail, download the pdf file.
+
+Project tested with GCC 4.7.2
