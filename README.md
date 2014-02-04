@@ -16,6 +16,7 @@ to mock such functions. To perfom automatic mocking, the external function of th
 software to test are replaced with the new functions generated via plugin.
 In this thesis, we explain how we have developed a system able to perfom
 automatic mocking.
+
 The thesis has been completely realized at the Baseband Tools department of
 Ericsson AB in Linköping, Sweden.
 
